@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Deterministic>true</Deterministic>
+    <Authors>Aneesh Krishna</Authors>
+    <Product>Crucible</Product>
+    <Description>Deterministic simulation and systematic concurrency forge for .NET</Description>
+  </PropertyGroup>
+</Project>
