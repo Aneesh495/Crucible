@@ -69,14 +69,12 @@ dotnet run --project src/Crucible.Cli -- run --workload or-set --seed 7 --nodes 
 
 Deeper reading: [`docs/architecture.md`](docs/architecture.md).
 
-## What works / what is not claimed
+## What works
 
 Working: deterministic single-threaded simulation, DFS/PCT exploration, schedule
 replay, Raft election + log replication under partitions, 2PC abort/commit,
 CRDT convergence under reordering, linearizability checks for register/queue/set.
 
-Not claimed: multi-process cluster execution, production Raft deployment,
-exhaustive verification for unbounded state spaces, or formal TLA+ export.
 
 ## License
 
