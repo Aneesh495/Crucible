@@ -77,12 +77,3 @@ flowchart TB
 | `Crucible.Protocols` | Raft, Paxos, 2PC, gossip, CRDTs |
 | `Crucible.Structures` | Lock-free structures over simulated memory |
 | `Crucible.Cli` | User-facing commands |
-
-## What is not simulated
-
-- Multi-process OS threads
-- Real TCP sockets
-- Wall-clock timing proofs
-
-The goal is to find logic bugs and safety violations under adversarial
-scheduling, not to benchmark production throughput.
