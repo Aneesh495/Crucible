@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
-    <PackageReference Include="FluentAssertions" Version="8.11.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
@@ -27,6 +26,7 @@
     <ProjectReference Include="..\..\src\Crucible.Checking\Crucible.Checking.csproj" />
     <ProjectReference Include="..\..\src\Crucible.Protocols\Crucible.Protocols.csproj" />
     <ProjectReference Include="..\..\src\Crucible.Structures\Crucible.Structures.csproj" />
+    <ProjectReference Include="..\..\src\Crucible.Cli\Crucible.Cli.csproj" />
   </ItemGroup>
 
 </Project>

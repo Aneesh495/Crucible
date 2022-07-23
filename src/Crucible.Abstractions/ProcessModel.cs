@@ -21,6 +21,12 @@ public interface ISimProcess
     IEnumerable<InvariantViolation> CheckLocalInvariants();
 }
 
+/// <summary>Optional interface for processes to provide a compact deterministic state summary for state hashing.</summary>
+public interface IStateDigestProvider
+{
+    string? GetStateDigest();
+}
+
 /// <summary>Services available to a process while it is running.</summary>
 public interface ISimContext
 {
@@ -49,6 +55,7 @@ public interface IWorkload
 public sealed class WorkloadOptions
 {
     public int NodeCount { get; init; } = 3;
+    public int ClientOpLimit { get; init; } = 10;
     public long ElectionTimeoutMin { get; init; } = 50;
     public long ElectionTimeoutMax { get; init; } = 100;
     public long HeartbeatInterval { get; init; } = 20;

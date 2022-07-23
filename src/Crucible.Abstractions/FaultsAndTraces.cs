@@ -18,6 +18,7 @@ public enum FaultKind
 /// <summary>A planned fault relative to simulation time or step count.</summary>
 public sealed class FaultEvent
 {
+    public long Id { get; init; }
     public FaultKind Kind { get; init; }
     public SimTime? AtTime { get; init; }
     public int? AtStep { get; init; }
@@ -29,14 +30,17 @@ public sealed class FaultEvent
     public string? Label { get; init; }
 
     public override string ToString() =>
-        $"{Kind} step={AtStep} time={AtTime} target={Target} {Label}";
+        $"fault#{Id} {Kind} step={AtStep} time={AtTime} target={Target} {Label}";
 }
 
 /// <summary>Opaque handle for a recorded schedule ready for replay.</summary>
 public sealed class ScheduleTrace
 {
+    public int SchemaVersion { get; init; } = 1;
     public int Seed { get; init; }
     public string Workload { get; init; } = "";
+    public WorkloadOptions? Options { get; init; }
+    public string? ChaosProfile { get; init; }
     public IReadOnlyList<ScheduleChoice> Choices { get; init; } = Array.Empty<ScheduleChoice>();
     public IReadOnlyList<FaultEvent> Faults { get; init; } = Array.Empty<FaultEvent>();
     public string? FailureSummary { get; init; }

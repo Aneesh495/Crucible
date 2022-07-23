@@ -9,6 +9,17 @@ public interface IMessage
 /// <summary>Envelope wrapping a payload with routing and delivery metadata.</summary>
 public sealed class MessageEnvelope
 {
+    public MessageEnvelope() { }
+
+    public MessageEnvelope(NodeId from, NodeId to, IMessage payload, SimTime sentAt = default)
+    {
+        From = from;
+        To = to;
+        Payload = payload;
+        SentAt = sentAt;
+        DeliverAt = sentAt;
+    }
+
     public long MessageId { get; init; }
     public NodeId From { get; init; }
     public NodeId To { get; init; }

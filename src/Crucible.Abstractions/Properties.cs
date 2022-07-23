@@ -39,6 +39,7 @@ public interface IClusterView
     T? GetProcess<T>(NodeId id) where T : class, ISimProcess;
     IReadOnlyList<ISimProcess> AllProcesses { get; }
     IReadOnlyList<string> EventLog { get; }
+    bool IsQuiescent => false;
 }
 
 /// <summary>Sequential specification used by the linearizability checker.</summary>

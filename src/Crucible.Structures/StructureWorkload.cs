@@ -10,6 +10,7 @@ public sealed class StackWorkload : IWorkload
 {
     public string Name => "treiber-stack";
     private SimSharedMemory? _memory;
+    private TreiberStack? _stack;
 
     public IReadOnlyList<ISimProcess> CreateProcesses(int nodeCount, WorkloadOptions options)
     {
@@ -17,30 +18,33 @@ public sealed class StackWorkload : IWorkload
         for (var i = 0; i < nodeCount; i++)
         {
             var id = new NodeId(i);
-            workers.Add(new StackWorker(id, () => _memory!));
+            workers.Add(new StackWorker(id, () => _stack));
         }
         return workers;
     }
 
     public IReadOnlyList<IInvariant> GlobalInvariants =>
-        new IInvariant[] { new StackDepthInvariant(() => _memory) };
+        new IInvariant[] { new StackLinearizabilityInvariant(() => _memory) };
 
     public void DriveClient(ISimContext clientContext, IReadOnlyList<NodeId> nodes, int step)
     {
         // Client is wired externally after memory is bound.
     }
 
-    public void BindMemory(SimSharedMemory memory) => _memory = memory;
+    public void BindMemory(SimSharedMemory memory)
+    {
+        _memory = memory;
+        _stack = new TreiberStack(memory);
+    }
 
     private sealed class StackWorker : ISimProcess
     {
-        private readonly Func<SimSharedMemory> _memory;
-        private TreiberStack? _stack;
+        private readonly Func<TreiberStack?> _getStack;
 
-        public StackWorker(NodeId id, Func<SimSharedMemory> memory)
+        public StackWorker(NodeId id, Func<TreiberStack?> getStack)
         {
             Id = id;
-            _memory = memory;
+            _getStack = getStack;
         }
 
         public NodeId Id { get; }
@@ -49,19 +53,19 @@ public sealed class StackWorkload : IWorkload
         public void Start(ISimContext context)
         {
             State = ProcessState.Running;
-            _stack = new TreiberStack(_memory());
         }
 
         public void OnMessage(MessageEnvelope envelope) { }
 
         public void OnTimer(string name, long generation)
         {
-            if (_stack is null) return;
-            var pid = Id.Value;
+            var stack = _getStack();
+            if (stack is null) return;
+            var pid = (int)Id.Value;
             if (generation % 2 == 0)
-                _stack.Push(pid, generation);
+                stack.Push(pid, pid * 100 + generation);
             else
-                _stack.TryPop(pid, out _);
+                stack.TryPop(pid, out _);
         }
 
         public void OnCrash() => State = ProcessState.Crashed;
@@ -69,17 +73,30 @@ public sealed class StackWorkload : IWorkload
         public IEnumerable<InvariantViolation> CheckLocalInvariants() => Array.Empty<InvariantViolation>();
     }
 
-    private sealed class StackDepthInvariant : IInvariant
+    private sealed class StackLinearizabilityInvariant : IInvariant
     {
         private readonly Func<SimSharedMemory?> _memory;
-        public StackDepthInvariant(Func<SimSharedMemory?> memory) { _memory = memory; Name = "stack-history-recorded"; }
+        public StackLinearizabilityInvariant(Func<SimSharedMemory?> memory) { _memory = memory; Name = "stack-linearizable"; }
         public string Name { get; }
         public IEnumerable<InvariantViolation> Check(IClusterView cluster)
         {
-            if (cluster.EventLog.Count < 10)
-                yield break;
-            if (_memory()?.History.Invocations.Count == 0)
-                yield return new InvariantViolation { Name = Name, Detail = "no shared ops recorded" };
+            if (!cluster.IsQuiescent) yield break;
+            var mem = _memory();
+            if (mem is null) yield break;
+            var snap = mem.History.Snapshot();
+            if (!snap.Completed.Any()) yield break;
+            var checker = new LinearizabilityChecker<List<long>>(new StackSpec());
+            var res = checker.Check(snap);
+            if (!res.IsLinearizable)
+            {
+                yield return new InvariantViolation
+                {
+                    Name = Name,
+                    Detail = res.Detail ?? "Stack history is not linearizable",
+                    Severity = ViolationSeverity.Fatal,
+                    At = cluster.Now
+                };
+            }
         }
     }
 }

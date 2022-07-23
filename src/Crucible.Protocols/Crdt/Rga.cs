@@ -51,7 +51,15 @@ public sealed class RgaNode : ISimProcess
 
     public void OnMessage(MessageEnvelope envelope)
     {
-        if (envelope.Payload is RgaInsert ins) _doc.Apply(ins);
+        if (envelope.Payload is RgaInsert ins)
+        {
+            _doc.Apply(ins);
+            if (envelope.From.Value == 999 && _ctx is not null)
+            {
+                for (var i = 0; i < _peers; i++)
+                    if (i != Id.Value) _ctx.Network.Send(Id, new NodeId(i), ins);
+            }
+        }
         else if (envelope.Payload is RgaState st)
         {
             var other = new RgaDocument();
@@ -80,6 +88,8 @@ public sealed class RgaConvergenceInvariant : IInvariant
     public string Name => "rga-convergence";
     public IEnumerable<InvariantViolation> Check(IClusterView cluster)
     {
+        if (!cluster.IsQuiescent) yield break;
+
         string? reference = null;
         foreach (var p in cluster.AllProcesses.OfType<RgaNode>())
         {
@@ -101,7 +111,7 @@ public sealed class RgaWorkload : IWorkload
         for (var i = 0; i < nodeCount; i++) list.Add(new RgaNode(new NodeId(i), nodeCount));
         return list;
     }
-    public IReadOnlyList<IInvariant> GlobalInvariants { get; } = new IInvariant[] { new RgaConvergenceInvariant() };
+    public IReadOnlyList<IInvariant> GlobalInvariants => new IInvariant[] { new RgaConvergenceInvariant() };
     public void DriveClient(ISimContext ctx, IReadOnlyList<NodeId> nodes, int step)
     {
         if (nodes.Count == 0) return;

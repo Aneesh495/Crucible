@@ -45,7 +45,12 @@ public sealed record ClientResponse(string Command, long ClientId, long Seq, boo
     public string TypeName => nameof(ClientResponse);
 }
 
-public sealed record InstallSnapshot(long Term, long LeaderId, long LastIncludedIndex, long LastIncludedTerm, string StateMachineKey) : IMessage
+public sealed record InstallSnapshot(
+    long Term,
+    long LeaderId,
+    long LastIncludedIndex,
+    long LastIncludedTerm,
+    Dictionary<string, string> StateMachineData) : IMessage
 {
     public string TypeName => nameof(InstallSnapshot);
 }

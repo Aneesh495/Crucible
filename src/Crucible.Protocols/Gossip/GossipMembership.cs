@@ -117,6 +117,6 @@ public sealed class GossipWorkload : IWorkload
         for (var i = 0; i < nodeCount; i++) list.Add(new GossipNode(new NodeId(i), nodeCount));
         return list;
     }
-    public IReadOnlyList<IInvariant> GlobalInvariants { get; } = new IInvariant[] { new GossipMonotonicMembershipInvariant() };
+    public IReadOnlyList<IInvariant> GlobalInvariants => new IInvariant[] { new GossipMonotonicMembershipInvariant() };
     public void DriveClient(ISimContext ctx, IReadOnlyList<NodeId> nodes, int step) { }
 }

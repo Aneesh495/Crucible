@@ -26,11 +26,11 @@ public sealed class ChaosProfile
         };
         network.SetDefaultLink(link);
         foreach (var a in nodes)
-        foreach (var b in nodes)
-        {
-            if (a != b)
-                network.ConfigureLink(a, b, link);
-        }
+            foreach (var b in nodes)
+            {
+                if (a != b)
+                    network.ConfigureLink(a, b, link);
+            }
     }
 
     public void ApplyScripted(DeterministicRuntime runtime)

@@ -2,7 +2,7 @@ namespace Crucible.Protocols.Raft;
 
 using Crucible.Abstractions;
 
-public sealed class RaftNode : ISimProcess
+public sealed class RaftNode : ISimProcess, IStateDigestProvider
 {
     private readonly WorkloadOptions _options;
     private readonly int _clusterSize;
@@ -10,12 +10,12 @@ public sealed class RaftNode : ISimProcess
     private RaftPersistentState _state = new();
     private RaftRole _role = RaftRole.Follower;
     private long _leaderId = -1;
-    private long _electionDeadline;
     private long _heartbeatInterval;
     private readonly Dictionary<long, long> _nextIndex = new();
     private readonly Dictionary<long, long> _matchIndex = new();
     private readonly Dictionary<(long clientId, long seq), bool> _clientDedup = new();
-    private int _votesReceived;
+    private readonly Dictionary<long, (NodeId from, ClientRequest req)> _pendingClientRequests = new();
+    private readonly HashSet<NodeId> _grantedVotes = new();
 
     public RaftNode(NodeId id, int clusterSize, WorkloadOptions options)
     {
@@ -28,6 +28,17 @@ public sealed class RaftNode : ISimProcess
     public ProcessState State { get; private set; } = ProcessState.Stopped;
     public RaftRole Role => _role;
     public RaftPersistentState Persistent => _state;
+
+    public string? GetStateDigest() =>
+        $"term={Persistent.CurrentTerm}:role={Role}:log={Persistent.LastLogIndex}:commit={Persistent.CommitIndex}";
+    public long LeaderId => _leaderId;
+    public IReadOnlyDictionary<string, string> StateMachine => _state.StateMachine;
+
+    public void TakeSnapshot(long snapshotIndex, Dictionary<string, string> stateMachineData)
+    {
+        var term = _state.GetEntryTerm(snapshotIndex);
+        _state.InstallSnapshotData(snapshotIndex, term, stateMachineData);
+    }
 
     public void Start(ISimContext context)
     {
@@ -43,6 +54,9 @@ public sealed class RaftNode : ISimProcess
         State = ProcessState.Crashed;
         _ctx?.CancelTimer("election");
         _ctx?.CancelTimer("heartbeat");
+        _role = RaftRole.Follower;
+        _grantedVotes.Clear();
+        _pendingClientRequests.Clear();
     }
 
     public void OnRestart(ISimContext context)
@@ -50,6 +64,13 @@ public sealed class RaftNode : ISimProcess
         State = ProcessState.Running;
         _ctx = context;
         _state = RaftPersistentState.Load(context.Storage, Id);
+        _role = RaftRole.Follower;
+        _grantedVotes.Clear();
+        _pendingClientRequests.Clear();
+
+        // Replay committed log onto state machine
+        _state.ApplyCommitted();
+
         BecomeFollower(context, _state.CurrentTerm);
         ResetElectionTimer(context);
         context.RecordEvent("raft", "restarted");
@@ -64,7 +85,7 @@ public sealed class RaftNode : ISimProcess
                 HandleVoteRequest(envelope.From, vr);
                 break;
             case VoteResponse vresp:
-                HandleVoteResponse(vresp);
+                HandleVoteResponse(envelope.From, vresp);
                 break;
             case AppendEntriesRequest ae:
                 HandleAppendEntries(envelope.From, ae);
@@ -123,6 +144,7 @@ public sealed class RaftNode : ISimProcess
     {
         _role = RaftRole.Follower;
         _leaderId = -1;
+        _grantedVotes.Clear();
         if (term > _state.CurrentTerm)
         {
             _state.CurrentTerm = term;
@@ -139,6 +161,8 @@ public sealed class RaftNode : ISimProcess
         _state.VotedFor = Id.Value;
         _state.Persist(ctx.Storage, Id);
         _leaderId = -1;
+        _grantedVotes.Clear();
+        _grantedVotes.Add(Id); // vote for self
         ctx.RecordEvent("raft", $"became candidate term={_state.CurrentTerm}");
     }
 
@@ -163,7 +187,6 @@ public sealed class RaftNode : ISimProcess
         var min = _options.ElectionTimeoutMin;
         var max = _options.ElectionTimeoutMax;
         var timeout = ctx.Random.NextLong(min, max + 1);
-        _electionDeadline = timeout;
         _heartbeatInterval = _options.HeartbeatInterval;
         ctx.SetTimer("election", timeout);
     }
@@ -172,7 +195,6 @@ public sealed class RaftNode : ISimProcess
     {
         if (_ctx is null) return;
         BecomeCandidate(_ctx);
-        _votesReceived = 1;
         var lastIdx = _state.LastLogIndex;
         var lastTerm = _state.LastLogTerm;
         for (var i = 0; i < _clusterSize; i++)
@@ -186,24 +208,24 @@ public sealed class RaftNode : ISimProcess
     private void HandleVoteRequest(NodeId from, VoteRequest req)
     {
         if (_ctx is null) return;
-        var respTerm = _state.CurrentTerm;
-        var grant = false;
         if (req.Term > _state.CurrentTerm)
             BecomeFollower(_ctx, req.Term);
-        if (req.Term < _state.CurrentTerm)
+
+        var grant = false;
+        if (req.Term == _state.CurrentTerm)
         {
-            SendVoteResponse(from, respTerm, false);
-            return;
+            var logOk = req.LastLogTerm > _state.LastLogTerm ||
+                        (req.LastLogTerm == _state.LastLogTerm && req.LastLogIndex >= _state.LastLogIndex);
+
+            if ((_state.VotedFor is null || _state.VotedFor == req.CandidateId) && logOk)
+            {
+                _state.VotedFor = req.CandidateId;
+                _state.Persist(_ctx.Storage, Id);
+                grant = true;
+                ResetElectionTimer(_ctx);
+            }
         }
-        var logOk = req.LastLogTerm > _state.LastLogTerm ||
-                    (req.LastLogTerm == _state.LastLogTerm && req.LastLogIndex >= _state.LastLogIndex);
-        if ((_state.VotedFor is null || _state.VotedFor == req.CandidateId) && logOk)
-        {
-            _state.VotedFor = req.CandidateId;
-            _state.Persist(_ctx.Storage, Id);
-            grant = true;
-            ResetElectionTimer(_ctx);
-        }
+
         SendVoteResponse(from, _state.CurrentTerm, grant);
     }
 
@@ -212,57 +234,77 @@ public sealed class RaftNode : ISimProcess
         _ctx?.Network.Send(Id, to, new VoteResponse(term, granted));
     }
 
-    private void HandleVoteResponse(VoteResponse resp)
+    private void HandleVoteResponse(NodeId from, VoteResponse resp)
     {
         if (_ctx is null || _role != RaftRole.Candidate) return;
+
         if (resp.Term > _state.CurrentTerm)
         {
             BecomeFollower(_ctx, resp.Term);
             return;
         }
+
         if (resp.Term < _state.CurrentTerm || !resp.VoteGranted) return;
-        _votesReceived++;
-        if (_votesReceived >= _clusterSize / 2 + 1)
+
+        // Deduplicate votes by voter node ID:
+        _grantedVotes.Add(from);
+
+        if (_grantedVotes.Count >= _clusterSize / 2 + 1)
             BecomeLeader(_ctx);
     }
 
     private void HandleAppendEntries(NodeId from, AppendEntriesRequest req)
     {
         if (_ctx is null) return;
+
         if (req.Term > _state.CurrentTerm)
             BecomeFollower(_ctx, req.Term);
-        var success = false;
-        long match = 0;
-        if (req.Term >= _state.CurrentTerm)
+
+        if (req.Term < _state.CurrentTerm)
         {
-            _role = RaftRole.Follower;
-            _leaderId = req.LeaderId;
-            ResetElectionTimer(_ctx);
-            if (req.PrevLogIndex > 0)
+            SendAppendEntriesResponse(from, _state.CurrentTerm, false, _state.LastLogIndex);
+            return;
+        }
+
+        _role = RaftRole.Follower;
+        _leaderId = req.LeaderId;
+        ResetElectionTimer(_ctx);
+
+        // Verify PrevLogIndex and PrevLogTerm
+        if (req.PrevLogIndex > 0)
+        {
+            if (!_state.TryGetEntry(req.PrevLogIndex, out var prev) || prev.Term != req.PrevLogTerm)
             {
-                if (!_state.TryGetEntry(req.PrevLogIndex, out var prev) || prev.Term != req.PrevLogTerm)
+                SendAppendEntriesResponse(from, _state.CurrentTerm, false, _state.LastLogIndex);
+                return;
+            }
+        }
+
+        // Append new entries and resolve conflicts
+        foreach (var entry in req.Entries)
+        {
+            if (_state.TryGetEntry(entry.Index, out var existing))
+            {
+                if (existing.Term != entry.Term)
                 {
-                    SendAppendEntriesResponse(from, _state.CurrentTerm, false, match);
-                    return;
+                    _state.TruncateFrom(entry.Index);
+                    _state.AppendEntry(entry);
                 }
             }
-            var idx = req.PrevLogIndex;
-            foreach (var entry in req.Entries)
+            else
             {
-                idx++;
-                if (_state.TryGetEntry(idx, out var existing) && existing.Term != entry.Term)
-                    _state.TruncateFrom(idx);
-                if (!_state.TryGetEntry(idx, out _))
-                    _state.AppendEntry(entry with { Index = idx, Term = req.Term });
+                _state.AppendEntry(entry);
             }
-            if (req.LeaderCommit > _state.CommitIndex)
-                _state.CommitIndex = Math.Min(req.LeaderCommit, _state.LastLogIndex);
-            _state.ApplyCommitted();
-            _state.Persist(_ctx.Storage, Id);
-            success = true;
-            match = _state.LastLogIndex;
         }
-        SendAppendEntriesResponse(from, _state.CurrentTerm, success, match);
+
+        if (req.LeaderCommit > _state.CommitIndex)
+        {
+            _state.CommitIndex = Math.Min(req.LeaderCommit, _state.LastLogIndex);
+            _state.ApplyCommitted();
+        }
+
+        _state.Persist(_ctx.Storage, Id);
+        SendAppendEntriesResponse(from, _state.CurrentTerm, true, _state.LastLogIndex);
     }
 
     private void SendAppendEntriesResponse(NodeId to, long term, bool success, long matchIndex)
@@ -273,13 +315,25 @@ public sealed class RaftNode : ISimProcess
     private void HandleAppendEntriesResponse(NodeId from, AppendEntriesResponse resp)
     {
         if (_ctx is null || _role != RaftRole.Leader) return;
+
         if (resp.Term > _state.CurrentTerm)
         {
             BecomeFollower(_ctx, resp.Term);
             return;
         }
-        if (resp.Term < _state.CurrentTerm || !resp.Success) return;
-        _matchIndex[from.Value] = resp.MatchIndex;
+
+        if (resp.Term < _state.CurrentTerm) return;
+
+        if (!resp.Success)
+        {
+            // Backtrack nextIndex for this follower and retry
+            var currentNext = _nextIndex.GetValueOrDefault(from.Value, _state.LastLogIndex + 1);
+            _nextIndex[from.Value] = Math.Max(1, currentNext - 1);
+            SendAppendEntriesTo(from);
+            return;
+        }
+
+        _matchIndex[from.Value] = Math.Max(_matchIndex.GetValueOrDefault(from.Value, 0), resp.MatchIndex);
         _nextIndex[from.Value] = resp.MatchIndex + 1;
         AdvanceCommitIndex();
     }
@@ -288,20 +342,40 @@ public sealed class RaftNode : ISimProcess
     {
         for (var n = _state.LastLogIndex; n > _state.CommitIndex; n--)
         {
-            var count = 1;
-            for (var i = 0; i < _clusterSize; i++)
+            if (_state.TryGetEntry(n, out var e) && e.Term == _state.CurrentTerm)
             {
-                if (i == Id.Value) continue;
-                if (_matchIndex.TryGetValue(i, out var m) && m >= n)
-                    count++;
+                var count = 1; // leader itself
+                for (var i = 0; i < _clusterSize; i++)
+                {
+                    if (i == Id.Value) continue;
+                    if (_matchIndex.TryGetValue(i, out var m) && m >= n)
+                        count++;
+                }
+                if (count >= _clusterSize / 2 + 1)
+                {
+                    _state.CommitIndex = n;
+                    _state.ApplyCommitted();
+                    _state.Persist(_ctx!.Storage, Id);
+                    NotifyCommittedClients();
+                    break;
+                }
             }
-            if (count >= _clusterSize / 2 + 1 && _state.TryGetEntry(n, out var e) && e.Term == _state.CurrentTerm)
-            {
-                _state.CommitIndex = n;
-                _state.ApplyCommitted();
-                _state.Persist(_ctx!.Storage, Id);
-                break;
-            }
+        }
+    }
+
+    private void NotifyCommittedClients()
+    {
+        var committedIndices = _pendingClientRequests.Keys
+            .Where(idx => idx <= _state.CommitIndex)
+            .OrderBy(idx => idx)
+            .ToList();
+
+        foreach (var idx in committedIndices)
+        {
+            var (clientNode, req) = _pendingClientRequests[idx];
+            _clientDedup[(req.ClientId, req.Seq)] = true;
+            ReplyClient(clientNode, req, true, null);
+            _pendingClientRequests.Remove(idx);
         }
     }
 
@@ -319,16 +393,32 @@ public sealed class RaftNode : ISimProcess
     {
         if (_ctx is null) return;
         var next = _nextIndex.GetValueOrDefault(peer.Value, _state.LastLogIndex + 1);
+
+        // If follower is behind snapshot, send InstallSnapshot
+        if (_state.SnapshotIndex > 0 && next <= _state.SnapshotIndex)
+        {
+            var snap = new InstallSnapshot(
+                _state.CurrentTerm,
+                Id.Value,
+                _state.SnapshotIndex,
+                _state.SnapshotTerm,
+                new Dictionary<string, string>(_state.StateMachine));
+            _ctx.Network.Send(Id, peer, snap);
+            return;
+        }
+
         var prevIdx = next - 1;
         long prevTerm = 0;
         if (prevIdx > 0 && _state.TryGetEntry(prevIdx, out var prev))
             prevTerm = prev.Term;
+
         var entries = new List<LogEntry>();
         for (var idx = next; idx <= _state.LastLogIndex; idx++)
         {
             if (_state.TryGetEntry(idx, out var e))
                 entries.Add(e);
         }
+
         var req = new AppendEntriesRequest(
             _state.CurrentTerm,
             Id.Value,
@@ -348,18 +438,22 @@ public sealed class RaftNode : ISimProcess
                 _ctx.Network.Send(Id, new NodeId((int)_leaderId), req);
             return;
         }
+
         var key = (req.ClientId, req.Seq);
         if (_clientDedup.ContainsKey(key))
         {
             ReplyClient(from, req, true, null);
             return;
         }
+
         var entry = new LogEntry(_state.CurrentTerm, _state.LastLogIndex + 1, req.Command);
         _state.AppendEntry(entry);
         _state.Persist(_ctx.Storage, Id);
-        _clientDedup[key] = true;
+        _pendingClientRequests[entry.Index] = (from, req);
+
         BroadcastAppendEntries();
-        ReplyClient(from, req, true, null);
+        // NOTE: Client is NOT replied to here. Reply is sent only in NotifyCommittedClients()
+        // once the entry has been replicated to a quorum and committed.
     }
 
     private void ReplyClient(NodeId to, ClientRequest req, bool ok, string? error)
@@ -370,13 +464,14 @@ public sealed class RaftNode : ISimProcess
     private void HandleSnapshot(NodeId from, InstallSnapshot snap)
     {
         if (_ctx is null) return;
+        if (snap.Term > _state.CurrentTerm)
+            BecomeFollower(_ctx, snap.Term);
+
         if (snap.Term >= _state.CurrentTerm)
         {
-            BecomeFollower(_ctx, snap.Term);
-            _state.TruncateFrom(snap.LastIncludedIndex + 1);
-            _state.CommitIndex = snap.LastIncludedIndex;
-            _state.LastApplied = snap.LastIncludedIndex;
+            _state.InstallSnapshotData(snap.LastIncludedIndex, snap.LastIncludedTerm, snap.StateMachineData);
             _state.Persist(_ctx.Storage, Id);
+            _nextIndex[from.Value] = _state.LastLogIndex + 1;
         }
     }
 }

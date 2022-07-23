@@ -10,7 +10,7 @@ public sealed class SimNetwork : ISimNetwork
 {
     private readonly ISimClock _clock;
     private readonly ISimRandom _random;
-    private readonly IScheduleOracle? _oracle;
+    private IScheduleOracle? _oracle;
     private readonly Dictionary<(NodeId, NodeId), LinkConfig> _links = new();
     private readonly Dictionary<NodeId, List<MessageEnvelope>> _inboxes = new();
     private readonly List<MessageEnvelope> _inFlight = new();
@@ -23,6 +23,12 @@ public sealed class SimNetwork : ISimNetwork
         _clock = clock;
         _random = random;
         _oracle = oracle;
+    }
+
+    public IScheduleOracle? Oracle
+    {
+        get => _oracle;
+        set => _oracle = value;
     }
 
     public IReadOnlyList<MessageEnvelope> InFlight => _inFlight.ToArray();
@@ -51,11 +57,11 @@ public sealed class SimNetwork : ISimNetwork
     public void SetPartition(IReadOnlyCollection<NodeId> groupA, IReadOnlyCollection<NodeId> groupB)
     {
         foreach (var a in groupA)
-        foreach (var b in groupB)
-        {
-            _blocked.Add((a, b));
-            _blocked.Add((b, a));
-        }
+            foreach (var b in groupB)
+            {
+                _blocked.Add((a, b));
+                _blocked.Add((b, a));
+            }
     }
 
     public void HealPartitions() => _blocked.Clear();
@@ -223,6 +229,77 @@ public sealed class SimNetwork : ISimNetwork
             if (_inFlight[i].DeliverAt < min)
                 min = _inFlight[i].DeliverAt;
         return min;
+    }
+
+    public IReadOnlyList<MessageEnvelope> GetDueInFlight(SimTime now)
+    {
+        var due = new List<MessageEnvelope>();
+        foreach (var msg in _inFlight)
+        {
+            if (msg.DeliverAt <= now)
+                due.Add(msg);
+        }
+        due.Sort((a, b) =>
+        {
+            var c = a.DeliverAt.CompareTo(b.DeliverAt);
+            return c != 0 ? c : a.MessageId.CompareTo(b.MessageId);
+        });
+        return due;
+    }
+
+    public bool DeliverOneMessage(long messageId)
+    {
+        var idx = _inFlight.FindIndex(m => m.MessageId == messageId);
+        if (idx < 0) return false;
+
+        var msg = _inFlight[idx];
+        _inFlight.RemoveAt(idx);
+
+        if (!CanCommunicate(msg.From, msg.To))
+        {
+            MessagesDropped++;
+            return false;
+        }
+
+        if (!_inboxes.TryGetValue(msg.To, out var inbox))
+        {
+            inbox = new List<MessageEnvelope>();
+            _inboxes[msg.To] = inbox;
+        }
+        inbox.Add(msg);
+        MessagesDelivered++;
+        return true;
+    }
+
+    public int DropMessages(NodeId? target, NodeId? secondary = null)
+    {
+        var dropped = 0;
+        for (var i = _inFlight.Count - 1; i >= 0; i--)
+        {
+            var m = _inFlight[i];
+            bool match;
+            if (target is null)
+            {
+                match = true;
+            }
+            else if (secondary is null)
+            {
+                match = m.To == target.Value || m.From == target.Value;
+            }
+            else
+            {
+                match = (m.From == target.Value && m.To == secondary.Value) ||
+                        (m.From == secondary.Value && m.To == target.Value);
+            }
+
+            if (match)
+            {
+                _inFlight.RemoveAt(i);
+                MessagesDropped++;
+                dropped++;
+            }
+        }
+        return dropped;
     }
 
     public void DropAllInFlight()

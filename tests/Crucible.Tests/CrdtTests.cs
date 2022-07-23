@@ -1,879 +1,124 @@
-using Crucible.Protocols.Crdt;
-using Crucible.Abstractions;
-using Crucible.Runtime;
-using FluentAssertions;
-
 namespace Crucible.Tests;
+
+using Crucible.Abstractions;
+using Crucible.Faults;
+using Crucible.Protocols;
+using Crucible.Protocols.Crdt;
+using Crucible.Runtime;
+using Xunit;
 
 public class CrdtTests
 {
-
-    [Fact]
-    public void OrSet_merge_seed_1()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_2()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_3()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_4()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_5()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_6()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_7()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_8()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_9()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_10()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_11()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_12()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_13()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_14()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_15()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_16()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_17()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_18()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_19()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_20()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_21()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_22()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_23()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_24()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_25()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_26()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_27()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_28()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_29()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_30()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_31()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_32()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_33()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_34()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_35()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_36()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_37()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_38()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_39()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_40()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_41()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_42()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_43()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_44()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_45()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_46()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_47()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_48()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_49()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_50()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_51()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_52()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_53()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_54()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_55()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
-
-    [Fact]
-    public void OrSet_merge_seed_56()
+    [Theory]
+    [InlineData("x", "y")]
+    [InlineData("apple", "banana")]
+    [InlineData("k1", "k2")]
+    public void OrSet_basic_merge(string val1, string val2)
     {
         var a = new OrSetDocument();
         var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
+        a.ApplyAdd(new OrSetTag("n0", 1), val1);
+        b.ApplyAdd(new OrSetTag("n1", 1), val2);
         a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
 
-    [Fact]
-    public void OrSet_merge_seed_57()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
+        var read = a.Read();
+        Assert.Contains(val1, read);
+        Assert.Contains(val2, read);
+        Assert.Equal(2, read.Count);
     }
 
     [Fact]
-    public void OrSet_merge_seed_58()
+    public void OrSet_observed_remove_semantics()
     {
         var a = new OrSetDocument();
         var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
 
-    [Fact]
-    public void OrSet_merge_seed_59()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        var tagA = new OrSetTag("n0", 1);
+        a.ApplyAdd(tagA, "item");
 
-    [Fact]
-    public void OrSet_merge_seed_60()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        // Sync a to b
+        b.Merge(a);
 
-    [Fact]
-    public void OrSet_merge_seed_61()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        // a removes item (tagA is observed)
+        a.ApplyRemove(tagA, "item");
 
-    [Fact]
-    public void OrSet_merge_seed_62()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        // b concurrently adds item with new tagB
+        var tagB = new OrSetTag("n1", 2);
+        b.ApplyAdd(tagB, "item");
 
-    [Fact]
-    public void OrSet_merge_seed_63()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
+        // Merge a and b: item must be present because tagB was not observed by the remove!
         a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        b.Merge(a);
 
-    [Fact]
-    public void OrSet_merge_seed_64()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
+        Assert.Contains("item", a.Read());
+        Assert.Contains("item", b.Read());
     }
 
     [Fact]
-    public void OrSet_merge_seed_65()
+    public void OrSet_merge_is_commutative_and_idempotent()
     {
         var a = new OrSetDocument();
         var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
 
-    [Fact]
-    public void OrSet_merge_seed_66()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        a.ApplyAdd(new OrSetTag("n0", 1), "alpha");
+        b.ApplyAdd(new OrSetTag("n1", 1), "beta");
+        b.ApplyAdd(new OrSetTag("n1", 2), "gamma");
 
-    [Fact]
-    public void OrSet_merge_seed_67()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        var doc1 = new OrSetDocument();
+        doc1.Merge(a);
+        doc1.Merge(b);
 
-    [Fact]
-    public void OrSet_merge_seed_68()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        var doc2 = new OrSetDocument();
+        doc2.Merge(b);
+        doc2.Merge(a);
 
-    [Fact]
-    public void OrSet_merge_seed_69()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        // Commutativity: a + b == b + a
+        Assert.True(doc1.Read().SetEquals(doc2.Read()));
 
-    [Fact]
-    public void OrSet_merge_seed_70()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
+        // Idempotence: a + a == a
+        doc1.Merge(a);
+        Assert.True(doc1.Read().SetEquals(doc2.Read()));
     }
 
     [Fact]
-    public void OrSet_merge_seed_71()
+    public void LwwRegister_resolves_concurrent_writes_by_timestamp_and_tiebreaker()
     {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        var reg = new LwwRegister();
 
-    [Fact]
-    public void OrSet_merge_seed_72()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        // Later timestamp wins
+        reg.Merge(new LwwValue(10, "n0", "first"));
+        reg.Merge(new LwwValue(20, "n1", "second"));
+        Assert.Equal("second", reg.Read());
 
-    [Fact]
-    public void OrSet_merge_seed_73()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
+        // Same timestamp: tie-break by node ID lexicographically
+        reg.Merge(new LwwValue(20, "n2", "third"));
+        Assert.Equal("third", reg.Read()); // "n2" > "n1"
     }
 
     [Fact]
-    public void OrSet_merge_seed_74()
+    public void Rga_reconstructs_text_deterministically()
     {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        var docA = new RgaDocument();
+        var docB = new RgaDocument();
 
-    [Fact]
-    public void OrSet_merge_seed_75()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        var op1 = new RgaInsert(new RgaId(0, 1), null, 'H');
+        var op2 = new RgaInsert(new RgaId(0, 2), new RgaId(0, 1), 'i');
 
-    [Fact]
-    public void OrSet_merge_seed_76()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        docA.Apply(op1);
+        docA.Apply(op2);
 
-    [Fact]
-    public void OrSet_merge_seed_77()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
+        docB.Merge(docA);
+        Assert.Equal("Hi", docB.Materialize());
     }
 
     [Fact]
-    public void OrSet_merge_seed_78()
+    public void OrSet_cluster_simulation_converges_under_chaos()
     {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
-    }
+        var options = new WorkloadOptions { NodeCount = 5, ClientOpLimit = 5 };
+        var (runtime, invariants) = ScenarioHost.Build("or-set", 42, options, chaos: ChaosProfile.Mild);
+        runtime.Run(500);
 
-    [Fact]
-    public void OrSet_merge_seed_79()
-    {
-        var a = new OrSetDocument();
-        var b = new OrSetDocument();
-        a.ApplyAdd(new OrSetTag("n0", 1), "x");
-        b.ApplyAdd(new OrSetTag("n1", 1), "y");
-        a.Merge(b);
-        a.Read().Should().BeEquivalentTo(new[] { "x", "y" });
+        var violations = runtime.CheckAll(invariants);
+        Assert.Empty(violations);
     }
 }

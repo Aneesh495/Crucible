@@ -34,14 +34,14 @@ public sealed class LinearizabilityChecker<TState>
         // Build precedence constraints: i must come before j if completed[i] returns before completed[j] starts.
         var mustPrecede = new List<(int before, int after)>();
         for (var i = 0; i < n; i++)
-        for (var j = 0; j < n; j++)
-        {
-            if (i == j) continue;
-            var a = completed[i];
-            var b = completed[j];
-            if (a.ReturnTime is SimTime ra && ra <= b.CallTime)
-                mustPrecede.Add((i, j));
-        }
+            for (var j = 0; j < n; j++)
+            {
+                if (i == j) continue;
+                var a = completed[i];
+                var b = completed[j];
+                if (a.ReturnTime is SimTime ra && ra < b.CallTime)
+                    mustPrecede.Add((i, j));
+            }
 
         var perm = new int[n];
         var used = new bool[n];
@@ -55,6 +55,16 @@ public sealed class LinearizabilityChecker<TState>
     {
         if (actual is null && expected is null) return true;
         if (actual is null || expected is null) return false;
+        if (actual is IConvertible && expected is IConvertible &&
+            actual.GetType() != typeof(string) && expected.GetType() != typeof(string) &&
+            actual.GetType() != typeof(bool) && expected.GetType() != typeof(bool))
+        {
+            try
+            {
+                return Convert.ToInt64(actual) == Convert.ToInt64(expected);
+            }
+            catch { }
+        }
         return actual.Equals(expected);
     }
 

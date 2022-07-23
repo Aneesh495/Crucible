@@ -11,14 +11,22 @@ public sealed class ExplorationResult
     public required string Workload { get; init; }
     public required long Steps { get; init; }
     public required bool Success { get; init; }
+    public RunClassification Classification { get; init; } = RunClassification.Completed;
+    public bool Inconclusive => Classification == RunClassification.StepBoundExhausted;
     public IReadOnlyList<InvariantViolation> Violations { get; init; } = Array.Empty<InvariantViolation>();
     public ScheduleTrace? Trace { get; init; }
     public string? Summary { get; init; }
+    public ExecutionMetrics? Metrics { get; init; }
 
     public override string ToString() =>
-        Success
-            ? $"OK seed={Seed} steps={Steps}"
-            : $"FAIL seed={Seed} steps={Steps}: {Summary}";
+        Classification switch
+        {
+            RunClassification.SafetyViolation => $"FAIL (violation) seed={Seed} steps={Steps}: {Summary}",
+            RunClassification.ReplayDivergence => $"FAIL (divergence) seed={Seed} steps={Steps}: {Summary}",
+            RunClassification.StepBoundExhausted => $"INCONCLUSIVE (bound-exhausted) seed={Seed} steps={Steps}",
+            RunClassification.Quiescent => $"OK (quiescent) seed={Seed} steps={Steps}",
+            _ => $"OK (completed) seed={Seed} steps={Steps}"
+        };
 }
 
 /// <summary>Configuration for explorers.</summary>
@@ -64,10 +72,21 @@ public static class ScheduleSerializer
 
     private static ScheduleTraceDto ToDto(ScheduleTrace t) => new()
     {
+        SchemaVersion = t.SchemaVersion,
         Seed = t.Seed,
         Workload = t.Workload,
         StepsExecuted = t.StepsExecuted,
         FailureSummary = t.FailureSummary,
+        ChaosProfile = t.ChaosProfile,
+        WorkloadOptions = t.Options is null ? null : new WorkloadOptionsDto
+        {
+            NodeCount = t.Options.NodeCount,
+            ClientOpLimit = t.Options.ClientOpLimit,
+            ElectionTimeoutMin = t.Options.ElectionTimeoutMin,
+            ElectionTimeoutMax = t.Options.ElectionTimeoutMax,
+            HeartbeatInterval = t.Options.HeartbeatInterval,
+            EnableSnapshots = t.Options.EnableSnapshots
+        },
         Choices = t.Choices.Select(c => new ScheduleChoiceDto
         {
             Step = c.Step,
@@ -75,10 +94,13 @@ public static class ScheduleSerializer
             ChosenIndex = c.ChosenIndex,
             CandidateCount = c.CandidateCount,
             Actor = c.Actor?.Value,
-            Label = c.Label
+            Label = c.Label,
+            TransitionKey = c.TransitionKey,
+            CandidateKeys = c.CandidateKeys?.ToList()
         }).ToList(),
         Faults = t.Faults.Select(f => new FaultEventDto
         {
+            Id = f.Id,
             Kind = f.Kind.ToString(),
             AtStep = f.AtStep,
             AtTime = f.AtTime?.Ticks,
@@ -93,10 +115,21 @@ public static class ScheduleSerializer
 
     private static ScheduleTrace FromDto(ScheduleTraceDto d) => new()
     {
+        SchemaVersion = d.SchemaVersion,
         Seed = d.Seed,
         Workload = d.Workload,
         StepsExecuted = d.StepsExecuted,
         FailureSummary = d.FailureSummary,
+        ChaosProfile = d.ChaosProfile,
+        Options = d.WorkloadOptions is null ? null : new WorkloadOptions
+        {
+            NodeCount = d.WorkloadOptions.NodeCount,
+            ClientOpLimit = d.WorkloadOptions.ClientOpLimit,
+            ElectionTimeoutMin = d.WorkloadOptions.ElectionTimeoutMin,
+            ElectionTimeoutMax = d.WorkloadOptions.ElectionTimeoutMax,
+            HeartbeatInterval = d.WorkloadOptions.HeartbeatInterval,
+            EnableSnapshots = d.WorkloadOptions.EnableSnapshots
+        },
         Choices = d.Choices.Select(c => new ScheduleChoice
         {
             Step = c.Step,
@@ -104,10 +137,13 @@ public static class ScheduleSerializer
             ChosenIndex = c.ChosenIndex,
             CandidateCount = c.CandidateCount,
             Actor = c.Actor is int a ? new NodeId(a) : null,
-            Label = c.Label
+            Label = c.Label,
+            TransitionKey = c.TransitionKey,
+            CandidateKeys = c.CandidateKeys
         }).ToArray(),
         Faults = d.Faults.Select(f => new FaultEvent
         {
+            Id = f.Id,
             Kind = Enum.Parse<FaultKind>(f.Kind),
             AtStep = f.AtStep,
             AtTime = f.AtTime is long t ? new SimTime(t) : null,
@@ -122,12 +158,25 @@ public static class ScheduleSerializer
 
     private sealed class ScheduleTraceDto
     {
+        public int SchemaVersion { get; set; } = 1;
         public int Seed { get; set; }
         public string Workload { get; set; } = "";
         public long StepsExecuted { get; set; }
         public string? FailureSummary { get; set; }
+        public string? ChaosProfile { get; set; }
+        public WorkloadOptionsDto? WorkloadOptions { get; set; }
         public List<ScheduleChoiceDto> Choices { get; set; } = new();
         public List<FaultEventDto> Faults { get; set; } = new();
+    }
+
+    private sealed class WorkloadOptionsDto
+    {
+        public int NodeCount { get; set; }
+        public int ClientOpLimit { get; set; }
+        public long ElectionTimeoutMin { get; set; }
+        public long ElectionTimeoutMax { get; set; }
+        public long HeartbeatInterval { get; set; }
+        public bool EnableSnapshots { get; set; }
     }
 
     private sealed class ScheduleChoiceDto
@@ -138,10 +187,13 @@ public static class ScheduleSerializer
         public int CandidateCount { get; set; }
         public int? Actor { get; set; }
         public string? Label { get; set; }
+        public string? TransitionKey { get; set; }
+        public List<string>? CandidateKeys { get; set; }
     }
 
     private sealed class FaultEventDto
     {
+        public long Id { get; set; }
         public string Kind { get; set; } = "";
         public int? AtStep { get; set; }
         public long? AtTime { get; set; }

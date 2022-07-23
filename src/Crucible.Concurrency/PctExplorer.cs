@@ -5,8 +5,8 @@ using Crucible.Runtime;
 
 /// <summary>
 /// Probabilistic Concurrency Testing (PCT) explorer.
-/// Assigns random priorities to a bounded number of "priority change points",
-/// which is known to find bugs with high probability in shallow buggy schedules.
+/// Assigns stable priorities to schedulable actors, and drops priority at d-1 randomly
+/// chosen priority change points, systematically finding concurrency bugs.
 /// </summary>
 public sealed class PctExplorer
 {
@@ -26,24 +26,30 @@ public sealed class PctExplorer
         invariants ??= Array.Empty<IInvariant>();
 
         var rng = new SeededRng(seed);
-        var oracle = new PctOracle(rng, _options.PctDepth);
+        var oracle = new PctOracle(rng, _options.PctDepth, _options.MaxSteps);
         var runtime = new DeterministicRuntime(seed, oracle);
-        builder(runtime, workloadOptions);
-        runtime.Run(_options.MaxSteps);
 
-        var violations = runtime.CheckAll(invariants);
-        var success = violations.Count == 0;
+        foreach (var inv in invariants)
+            runtime.RegisterInvariant(inv);
+
+        builder(runtime, workloadOptions);
+        var classification = runtime.Run(_options.MaxSteps);
+
+        var violations = runtime.Violations.Count > 0 ? runtime.Violations : runtime.CheckAll(invariants);
+        var success = violations.Count == 0 && classification != RunClassification.StepBoundExhausted;
+
         var trace = new ScheduleTrace
         {
             Seed = seed,
             Workload = workloadName,
+            Options = workloadOptions,
             Choices = oracle.Choices.ToArray(),
             Faults = Array.Empty<FaultEvent>(),
             StepsExecuted = runtime.StepsExecuted,
-            FailureSummary = success ? null : string.Join("; ", violations.Select(v => v.ToString()))
+            FailureSummary = violations.Count == 0 ? null : string.Join("; ", violations.Select(v => v.ToString()))
         };
 
-        if (!success && _options.ScheduleOutputDirectory is { } dir)
+        if (violations.Count > 0 && _options.ScheduleOutputDirectory is { } dir)
         {
             Directory.CreateDirectory(dir);
             ScheduleSerializer.WriteToFile(trace, Path.Combine(dir, $"pct-{seed}.schedule.json"));
@@ -55,9 +61,11 @@ public sealed class PctExplorer
             Workload = workloadName,
             Steps = runtime.StepsExecuted,
             Success = success,
+            Classification = classification,
             Violations = violations,
             Trace = trace,
-            Summary = trace.FailureSummary
+            Summary = violations.Count > 0 ? trace.FailureSummary : (classification == RunClassification.StepBoundExhausted ? "step bound exhausted" : "ok"),
+            Metrics = runtime.Metrics
         };
     }
 
@@ -82,81 +90,137 @@ public sealed class PctExplorer
 }
 
 /// <summary>
-/// PCT oracle: most of the time pick the enabled transition with highest priority.
-/// At d randomly chosen steps, reassign priorities (priority change points).
+/// Genuine Burckhardt PCT Oracle:
+/// - Assigns stable priorities to actors.
+/// - Randomly chooses d-1 priority change points across the step bound.
+/// - At change points, drops the active highest-priority actor below initial priorities.
+/// - Schedules the enabled candidate with the highest actor priority.
 /// </summary>
 public sealed class PctOracle : IScheduleOracle
 {
     private readonly ISimRandom _random;
     private readonly int _depth;
-    private readonly HashSet<int> _changePoints;
-    private readonly Dictionary<int, int> _priorities = new();
+    private readonly int _maxSteps;
+    private readonly List<int> _changePoints;
+    private readonly Dictionary<string, int> _actorPriorities = new(StringComparer.Ordinal);
     private readonly List<ScheduleChoice> _choices = new();
     private int _step;
-    private int _nextKey;
+    private int _nextInitialPriority;
 
-    public PctOracle(ISimRandom random, int depth)
+    public PctOracle(ISimRandom random, int depth, int maxSteps = 10_000)
     {
         _random = random;
-        _depth = Math.Max(1, depth);
-        _changePoints = new HashSet<int>();
-        // Change points sampled lazily as steps grow; pre-sample a window.
-        for (var i = 0; i < _depth; i++)
-            _changePoints.Add(random.Next(1, 10_000));
+        _depth = Math.Max(2, depth);
+        _maxSteps = Math.Max(10, maxSteps);
+        _nextInitialPriority = _depth + 100;
+
+        // Sample d - 1 distinct change points uniformly from [1, maxSteps]
+        var points = new HashSet<int>();
+        var targetPoints = _depth - 1;
+        var attempts = 0;
+        while (points.Count < targetPoints && attempts++ < 1000)
+        {
+            var pt = random.Next(1, _maxSteps + 1);
+            points.Add(pt);
+        }
+        _changePoints = points.OrderBy(p => p).ToList();
     }
 
     public IReadOnlyList<ScheduleChoice> Choices => _choices;
+    public IReadOnlyList<int> ChangePoints => _changePoints;
 
-    public int Choose(SchedulingPointKind kind, int candidateCount, NodeId? actor, string? label)
+    private int GetPriority(string actorKey)
+    {
+        if (!_actorPriorities.TryGetValue(actorKey, out var p))
+        {
+            p = _nextInitialPriority + _random.Next(0, 1000);
+            _actorPriorities[actorKey] = p;
+        }
+        return p;
+    }
+
+    private static string GetActorKey(NodeId? actor, string? transitionKey, int index)
+    {
+        if (actor.HasValue) return $"node:{actor.Value.Value}";
+        if (!string.IsNullOrEmpty(transitionKey))
+        {
+            var colon = transitionKey.IndexOf(':');
+            return colon > 0 ? transitionKey[..colon] : transitionKey;
+        }
+        return $"cand:{index}";
+    }
+
+    public int Choose(
+        SchedulingPointKind kind,
+        int candidateCount,
+        NodeId? actor,
+        string? label,
+        string? transitionKey = null,
+        IReadOnlyList<string>? candidateKeys = null)
     {
         if (candidateCount <= 0)
             throw new ArgumentOutOfRangeException(nameof(candidateCount));
 
-        if (_changePoints.Contains(_step))
-            _priorities.Clear();
+        if (candidateCount == 1)
+        {
+            var chosenKey1 = candidateKeys is not null && candidateKeys.Count > 0 ? candidateKeys[0] : transitionKey;
+            var choice1 = new ScheduleChoice
+            {
+                Step = _step++,
+                Kind = kind,
+                ChosenIndex = 0,
+                CandidateCount = candidateCount,
+                Actor = actor,
+                Label = label,
+                TransitionKey = chosenKey1,
+                CandidateKeys = candidateKeys
+            };
+            _choices.Add(choice1);
+            return 0;
+        }
 
-        // Assign priorities to candidate indices for this decision.
-        var best = 0;
-        var bestPri = int.MinValue;
+        // Apply priority change points
+        var changeIdx = _changePoints.IndexOf(_step);
+        if (changeIdx >= 0)
+        {
+            if (_actorPriorities.Count > 0)
+            {
+                var highest = _actorPriorities.OrderByDescending(kv => kv.Value).First();
+                _actorPriorities[highest.Key] = changeIdx + 1;
+            }
+        }
+
+        // Pick enabled candidate with highest actor priority
+        var bestIndex = 0;
+        var bestPriority = int.MinValue;
+
         for (var i = 0; i < candidateCount; i++)
         {
-            var key = _nextKey++;
-            if (!_priorities.TryGetValue(key, out var pri))
+            var cKey = candidateKeys is not null && i < candidateKeys.Count ? candidateKeys[i] : transitionKey;
+            var aKey = GetActorKey(actor, cKey, i);
+            var pri = GetPriority(aKey);
+
+            if (pri > bestPriority)
             {
-                pri = _random.Next();
-                _priorities[key] = pri;
-            }
-            // Use index-stable keys within this call.
-            var localPri = _random.Next();
-            if (i == 0 || localPri > bestPri)
-            {
-                bestPri = localPri;
-                best = i;
+                bestPriority = pri;
+                bestIndex = i;
             }
         }
 
-        // Classic PCT for thread scheduling picks max priority thread; here candidates
-        // are transitions. Bias toward a random permutation priority vector.
-        if (candidateCount > 1)
-        {
-            var ranks = Enumerable.Range(0, candidateCount).ToArray();
-            _random.Shuffle(ranks);
-            // At non-change steps, pick the first in priority order (ranks[0] after shuffle
-            // approximates a random total order established at change points).
-            best = ranks[0];
-        }
-
+        var chosenKey = candidateKeys is not null && bestIndex < candidateKeys.Count ? candidateKeys[bestIndex] : transitionKey;
         var choice = new ScheduleChoice
         {
             Step = _step++,
             Kind = kind,
-            ChosenIndex = best,
+            ChosenIndex = bestIndex,
             CandidateCount = candidateCount,
             Actor = actor,
-            Label = label
+            Label = label,
+            TransitionKey = chosenKey,
+            CandidateKeys = candidateKeys
         };
         _choices.Add(choice);
-        return best;
+        return bestIndex;
     }
 
     public void Record(ScheduleChoice choice) => _choices.Add(choice);

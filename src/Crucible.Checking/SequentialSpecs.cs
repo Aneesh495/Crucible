@@ -49,6 +49,50 @@ public sealed class RegisterSpec : ISequentialSpec<int?>
     }
 }
 
+public sealed class StackSpec : ISequentialSpec<List<long>>
+{
+    public string Name => "stack";
+
+    public List<long> InitialState => new();
+
+    public bool TryApply(List<long> state, HistoryInvocation invocation, out List<long> next, out object? result)
+    {
+        next = new List<long>(state);
+        result = null;
+        switch (invocation.Method)
+        {
+            case "push":
+                long val;
+                if (invocation.Argument is long l) val = l;
+                else if (invocation.Argument is int i) val = i;
+                else return false;
+
+                next.Add(val);
+                result = true;
+                return true;
+
+            case "pop":
+                if (next.Count == 0)
+                {
+                    result = null;
+                    return true;
+                }
+                var top = next[^1];
+                next.RemoveAt(next.Count - 1);
+                result = top;
+                return true;
+
+            case "size":
+                result = (long)next.Count;
+                return true;
+
+            default:
+                next = state;
+                return false;
+        }
+    }
+}
+
 public sealed class QueueSpec : ISequentialSpec<List<int>>
 {
     public string Name => "queue";
@@ -62,8 +106,10 @@ public sealed class QueueSpec : ISequentialSpec<List<int>>
         switch (invocation.Method)
         {
             case "enqueue":
-                if (invocation.Argument is not int v)
-                    return false;
+                int v;
+                if (invocation.Argument is int i) v = i;
+                else if (invocation.Argument is long l) v = (int)l;
+                else return false;
                 next.Add(v);
                 result = true;
                 return true;

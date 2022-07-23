@@ -24,8 +24,14 @@ public sealed class WorkloadRegistry
         Register(new OrSetWorkload(), SimpleConfigure);
         Register(new LwwRegisterWorkload(), SimpleConfigure);
         Register(new RgaWorkload(), SimpleConfigure);
-        Register(new TwoPcWorkload(), SimpleConfigure);
-        Register(new MultiPaxosWorkload(), SimpleConfigure);
+        var multiPaxos = new MultiPaxosWorkload();
+        Register(multiPaxos, SimpleConfigure);
+        _entries["paxos"] = new WorkloadEntry(multiPaxos, SimpleConfigure);
+
+        var twoPc = new TwoPcWorkload();
+        Register(twoPc, SimpleConfigure);
+        _entries["2pc"] = new WorkloadEntry(twoPc, SimpleConfigure);
+
         Register(new GossipWorkload(), SimpleConfigure);
         Register(new StackWorkload(), StructureScenario.Configure);
     }

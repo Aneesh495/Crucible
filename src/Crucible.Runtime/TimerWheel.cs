@@ -51,6 +51,32 @@ public sealed class TimerWheel
         return _heap.Count == 0 ? null : _heap[0].FireAt;
     }
 
+    public List<SimTimer> GetDue(SimTime now)
+    {
+        Compact();
+        var due = new List<SimTimer>();
+        foreach (var t in _heap)
+        {
+            if (!t.Cancelled && t.FireAt <= now)
+                due.Add(t);
+        }
+        due.Sort(Compare);
+        return due;
+    }
+
+    public bool ConsumeTimer(NodeId owner, string name, long generation, out SimTimer? timer)
+    {
+        if (_byName.TryGetValue((owner, name), out var t) && t.Generation == generation && !t.Cancelled)
+        {
+            _byName.Remove((owner, name));
+            t.Cancelled = true;
+            timer = t;
+            return true;
+        }
+        timer = null;
+        return false;
+    }
+
     public List<SimTimer> PopDue(SimTime now)
     {
         var due = new List<SimTimer>();

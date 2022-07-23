@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net9.0": {
+      "crucible.abstractions": {
+        "type": "Project"
+      },
+      "crucible.checking": {
+        "type": "Project",
+        "dependencies": {
+          "Crucible.Abstractions": "[1.0.0, )"
+        }
+      },
+      "crucible.faults": {
+        "type": "Project",
+        "dependencies": {
+          "Crucible.Abstractions": "[1.0.0, )",
+          "Crucible.Runtime": "[1.0.0, )"
+        }
+      },
+      "crucible.runtime": {
+        "type": "Project",
+        "dependencies": {
+          "Crucible.Abstractions": "[1.0.0, )",
+          "Crucible.Checking": "[1.0.0, )"
+        }
+      },
+      "crucible.structures": {
+        "type": "Project",
+        "dependencies": {
+          "Crucible.Abstractions": "[1.0.0, )",
+          "Crucible.Checking": "[1.0.0, )",
+          "Crucible.Runtime": "[1.0.0, )"
+        }
+      }
+    }
+  }
+}

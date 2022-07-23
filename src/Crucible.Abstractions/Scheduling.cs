@@ -28,12 +28,15 @@ public enum SchedulingPointKind
     TaskSpawn,
     TaskResume,
     MessageDeliver,
+    MessageProcess,
     TimerFire,
+    ClientOperation,
     LockAcquire,
     Yield,
     NondeterministicChoice,
     Crash,
-    Restart
+    Restart,
+    Fault
 }
 
 /// <summary>A recorded choice the explorer made (or will replay).</summary>
@@ -45,14 +48,22 @@ public readonly struct ScheduleChoice
     public int CandidateCount { get; init; }
     public NodeId? Actor { get; init; }
     public string? Label { get; init; }
+    public string? TransitionKey { get; init; }
+    public IReadOnlyList<string>? CandidateKeys { get; init; }
 
     public override string ToString() =>
-        $"#{Step} {Kind} pick={ChosenIndex}/{CandidateCount} {Actor} {Label}";
+        $"#{Step} {Kind} pick={ChosenIndex}/{CandidateCount} {Actor} {Label} key={TransitionKey}";
 }
 
 /// <summary>Callback the runtime uses to ask the explorer which enabled transition to take.</summary>
 public interface IScheduleOracle
 {
-    int Choose(SchedulingPointKind kind, int candidateCount, NodeId? actor, string? label);
+    int Choose(
+        SchedulingPointKind kind,
+        int candidateCount,
+        NodeId? actor,
+        string? label,
+        string? transitionKey = null,
+        IReadOnlyList<string>? candidateKeys = null);
     void Record(ScheduleChoice choice);
 }

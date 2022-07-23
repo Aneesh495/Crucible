@@ -39,7 +39,20 @@ public sealed class LwwNode : ISimProcess
 
     public void OnMessage(MessageEnvelope envelope)
     {
-        if (envelope.Payload is LwwUpdate u) _reg.Merge(u.Value);
+        if (envelope.Payload is LwwUpdate u)
+        {
+            var prev = _reg.Snapshot();
+            _reg.Merge(u.Value);
+            var curr = _reg.Snapshot();
+            if (_ctx is not null && (envelope.From.Value == 999 || prev != curr))
+            {
+                for (var i = 0; i < _peers; i++)
+                {
+                    if (i != Id.Value && i != envelope.From.Value)
+                        _ctx.Network.Send(Id, new NodeId(i), new LwwUpdate(curr));
+                }
+            }
+        }
     }
 
     public void OnTimer(string name, long generation) { }
@@ -62,6 +75,8 @@ public sealed class LwwConvergenceInvariant : IInvariant
     public string Name => "lww-convergence";
     public IEnumerable<InvariantViolation> Check(IClusterView cluster)
     {
+        if (!cluster.IsQuiescent) yield break;
+
         string? reference = null;
         foreach (var p in cluster.AllProcesses.OfType<LwwNode>())
         {
@@ -83,7 +98,7 @@ public sealed class LwwRegisterWorkload : IWorkload
         for (var i = 0; i < nodeCount; i++) list.Add(new LwwNode(new NodeId(i), nodeCount));
         return list;
     }
-    public IReadOnlyList<IInvariant> GlobalInvariants { get; } = new IInvariant[] { new LwwConvergenceInvariant() };
+    public IReadOnlyList<IInvariant> GlobalInvariants => new IInvariant[] { new LwwConvergenceInvariant() };
     public void DriveClient(ISimContext ctx, IReadOnlyList<NodeId> nodes, int step)
     {
         if (nodes.Count == 0) return;

@@ -112,12 +112,22 @@ public sealed class TwoPcAtomicityInvariant : IInvariant
         if (parts.Length == 0) yield break;
         var committed = parts.Count(p => p.Phase == TwoPcPhase.Committed);
         var aborted = parts.Count(p => p.Phase == TwoPcPhase.Aborted);
-        if (committed > 0 && committed < parts.Length && aborted == 0)
+        if (committed > 0 && aborted > 0)
         {
             yield return new InvariantViolation
             {
                 Name = Name,
-                Detail = $"partial commit: {committed}/{parts.Length}",
+                Detail = $"inconsistent decision: {committed} committed, {aborted} aborted",
+                Severity = ViolationSeverity.Fatal,
+                At = cluster.Now
+            };
+        }
+        if (cluster.IsQuiescent && committed > 0 && committed < parts.Length)
+        {
+            yield return new InvariantViolation
+            {
+                Name = Name,
+                Detail = $"partial commit after quiescence: {committed}/{parts.Length}",
                 Severity = ViolationSeverity.Fatal,
                 At = cluster.Now
             };
@@ -134,7 +144,7 @@ public sealed class TwoPcWorkload : IWorkload
         for (var i = 1; i < nodeCount; i++) list.Add(new TwoPcParticipant(new NodeId(i)));
         return list;
     }
-    public IReadOnlyList<IInvariant> GlobalInvariants { get; } = new IInvariant[] { new TwoPcAtomicityInvariant() };
+    public IReadOnlyList<IInvariant> GlobalInvariants => new IInvariant[] { new TwoPcAtomicityInvariant() };
     public void DriveClient(ISimContext ctx, IReadOnlyList<NodeId> nodes, int step)
     {
         ctx.Network.Send(new NodeId(999), new NodeId(0), new TwoPcPrepare($"tx-{step}"));

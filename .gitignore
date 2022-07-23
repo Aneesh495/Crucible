@@ -35,3 +35,4 @@ schedules/
 counterexamples/
 *.schedule.json
 *.history.json
+.local/

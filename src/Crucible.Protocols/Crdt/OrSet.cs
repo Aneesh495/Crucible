@@ -120,9 +120,19 @@ public sealed class OrSetNode : ISimProcess
         {
             case OrSetAdd add:
                 _doc.ApplyAdd(add.Tag, add.Element);
+                if (envelope.From.Value == 999 && _ctx is not null)
+                {
+                    for (var i = 0; i < _peers; i++)
+                        if (i != Id.Value) _ctx.Network.Send(Id, new NodeId(i), add);
+                }
                 break;
             case OrSetRemove rem:
                 _doc.ApplyRemove(rem.Tag, rem.Element);
+                if (envelope.From.Value == 999 && _ctx is not null)
+                {
+                    for (var i = 0; i < _peers; i++)
+                        if (i != Id.Value) _ctx.Network.Send(Id, new NodeId(i), rem);
+                }
                 break;
             case OrSetState st:
                 var other = new OrSetDocument();
@@ -171,6 +181,9 @@ public sealed class OrSetConvergenceInvariant : IInvariant
     public string Name => "or-set-convergence";
     public IEnumerable<InvariantViolation> Check(IClusterView cluster)
     {
+        // Eventual consistency allows transient divergence while sync messages are in-flight
+        if (!cluster.IsQuiescent) yield break;
+
         HashSet<string>? reference = null;
         foreach (var p in cluster.AllProcesses.OfType<OrSetNode>())
         {
@@ -202,7 +215,7 @@ public sealed class OrSetWorkload : IWorkload
         return list;
     }
 
-    public IReadOnlyList<IInvariant> GlobalInvariants { get; } = new IInvariant[] { new OrSetConvergenceInvariant() };
+    public IReadOnlyList<IInvariant> GlobalInvariants => new IInvariant[] { new OrSetConvergenceInvariant() };
 
     public void DriveClient(ISimContext ctx, IReadOnlyList<NodeId> nodes, int step)
     {

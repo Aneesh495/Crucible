@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net9.0": {
+      "crucible.abstractions": {
+        "type": "Project"
+      },
+      "crucible.checking": {
+        "type": "Project",
+        "dependencies": {
+          "Crucible.Abstractions": "[1.0.0, )"
+        }
+      }
+    }
+  }
+}

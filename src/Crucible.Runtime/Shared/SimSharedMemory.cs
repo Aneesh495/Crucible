@@ -22,6 +22,8 @@ public sealed class SimSharedMemory
 
     public ExecutionHistory History => _history;
 
+    public bool RecordCellOperations { get; set; } = false;
+
     public SimCell Allocate(long initial = 0)
     {
         var id = _nextCellId++;
@@ -29,43 +31,57 @@ public sealed class SimSharedMemory
         return new SimCell(this, id);
     }
 
+    public SimCell GetCell(long cellId) => new SimCell(this, cellId);
+
     internal long Load(int processId, long cellId)
     {
         _runtime.Choose(new NodeId(processId), 1, "shared-load");
-        var id = _history.Begin(processId, "read", cellId, _runtime.Clock.Now);
         var value = _cells.TryGetValue(cellId, out var v) ? v : 0;
-        _history.Complete(id, value, _runtime.Clock.Now);
+        if (RecordCellOperations)
+        {
+            var id = _history.Begin(processId, "read", cellId, _runtime.Clock.Now);
+            _history.Complete(id, value, _runtime.Clock.Now);
+        }
         return value;
     }
 
     internal void Store(int processId, long cellId, long value)
     {
         _runtime.Choose(new NodeId(processId), 1, "shared-store");
-        var id = _history.Begin(processId, "write", (cellId, value), _runtime.Clock.Now);
         _cells[cellId] = value;
-        _history.Complete(id, true, _runtime.Clock.Now);
+        if (RecordCellOperations)
+        {
+            var id = _history.Begin(processId, "write", (cellId, value), _runtime.Clock.Now);
+            _history.Complete(id, true, _runtime.Clock.Now);
+        }
     }
 
     internal bool CompareExchange(int processId, long cellId, long expected, long update)
     {
         _runtime.Choose(new NodeId(processId), 1, "shared-cas");
-        var id = _history.Begin(processId, "compareAndSwap", (expected, update), _runtime.Clock.Now);
         var current = _cells.TryGetValue(cellId, out var v) ? v : 0;
         var success = current == expected;
         if (success)
             _cells[cellId] = update;
-        _history.Complete(id, success, _runtime.Clock.Now);
+        if (RecordCellOperations)
+        {
+            var id = _history.Begin(processId, "compareAndSwap", (expected, update), _runtime.Clock.Now);
+            _history.Complete(id, success, _runtime.Clock.Now);
+        }
         return success;
     }
 
     internal long FetchAdd(int processId, long cellId, long delta)
     {
         _runtime.Choose(new NodeId(processId), 1, "shared-faa");
-        var id = _history.Begin(processId, "fetchAdd", delta, _runtime.Clock.Now);
         var current = _cells.TryGetValue(cellId, out var v) ? v : 0;
         var next = checked(current + delta);
         _cells[cellId] = next;
-        _history.Complete(id, current, _runtime.Clock.Now);
+        if (RecordCellOperations)
+        {
+            var id = _history.Begin(processId, "fetchAdd", delta, _runtime.Clock.Now);
+            _history.Complete(id, current, _runtime.Clock.Now);
+        }
         return current;
     }
 }
@@ -80,6 +96,8 @@ public sealed class SimCell
         _mem = mem;
         _id = id;
     }
+
+    public long Id => _id;
 
     public long Load(int processId) => _mem.Load(processId, _id);
     public void Store(int processId, long value) => _mem.Store(processId, _id, value);

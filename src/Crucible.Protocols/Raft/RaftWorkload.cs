@@ -16,11 +16,12 @@ public sealed class RaftWorkload : IWorkload
         return nodes;
     }
 
-    public IReadOnlyList<IInvariant> GlobalInvariants { get; } = new IInvariant[]
+    public IReadOnlyList<IInvariant> GlobalInvariants => new IInvariant[]
     {
         new RaftElectionSafetyInvariant(),
         new RaftLogMatchingInvariant(),
-        new RaftStateMachineSafetyInvariant()
+        new RaftStateMachineSafetyInvariant(),
+        new RaftLeaderCompletenessInvariant()
     };
 
     public void DriveClient(ISimContext clientContext, IReadOnlyList<NodeId> nodes, int step)

@@ -165,6 +165,6 @@ public sealed class MultiPaxosWorkload : IWorkload
         list.Add(new PaxosLearner(new NodeId(nodeCount + 1)));
         return list;
     }
-    public IReadOnlyList<IInvariant> GlobalInvariants { get; } = new IInvariant[] { new PaxosAgreementInvariant() };
+    public IReadOnlyList<IInvariant> GlobalInvariants => new IInvariant[] { new PaxosAgreementInvariant() };
     public void DriveClient(ISimContext ctx, IReadOnlyList<NodeId> nodes, int step) { }
 }
