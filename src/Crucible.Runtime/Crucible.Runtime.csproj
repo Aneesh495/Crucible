@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Crucible.Abstractions\Crucible.Abstractions.csproj" />
+    <ProjectReference Include="..\Crucible.Checking\Crucible.Checking.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

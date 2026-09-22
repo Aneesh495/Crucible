@@ -4,6 +4,8 @@
     <ProjectReference Include="..\Crucible.Abstractions\Crucible.Abstractions.csproj" />
     <ProjectReference Include="..\Crucible.Runtime\Crucible.Runtime.csproj" />
     <ProjectReference Include="..\Crucible.Faults\Crucible.Faults.csproj" />
+    <ProjectReference Include="..\Crucible.Structures\Crucible.Structures.csproj" />
+    <ProjectReference Include="..\Crucible.Checking\Crucible.Checking.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
