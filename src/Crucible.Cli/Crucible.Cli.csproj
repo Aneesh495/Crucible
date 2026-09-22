@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Crucible.Abstractions\Crucible.Abstractions.csproj" />
+    <ProjectReference Include="..\Crucible.Runtime\Crucible.Runtime.csproj" />
+    <ProjectReference Include="..\Crucible.Concurrency\Crucible.Concurrency.csproj" />
+    <ProjectReference Include="..\Crucible.Faults\Crucible.Faults.csproj" />
+    <ProjectReference Include="..\Crucible.Checking\Crucible.Checking.csproj" />
+    <ProjectReference Include="..\Crucible.Protocols\Crucible.Protocols.csproj" />
+    <ProjectReference Include="..\Crucible.Structures\Crucible.Structures.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
